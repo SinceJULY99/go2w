@@ -4,7 +4,7 @@ go2w_cmd_bridge:
   ros__parameters:
     max_vx: 0.45         # m/s（10-22 由 0.3 提速）
     max_vy: 0.1          # m/s（Go2W 能横移；与 Nav2 一致，压低横移）
-    max_wz: 0.8          # rad/s（约 46°/s，10-22 由 30°/s 提速）
+    max_wz: 1.2          # rad/s（约 69°/s；10-22 由 30°/s 提到 46°/s，10-28 再提到 69°/s）
     cmd_timeout: 0.3     # s，超过这么久没有新 /cmd_vel 就停车
     require_odom_healthy: true
     deadband: 0.01

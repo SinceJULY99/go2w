@@ -64,19 +64,19 @@ case "${1:-}" in
     if ! running; then echo "导航没有运行，先执行：$0 start"; exit 1; fi
     if ! healthy; then echo "❌ 里程计不健康，不能解锁。执行 $0 stop 后重新 start"; exit 1; fi
     docker exec "$C" grep -q initialPoseReceived "$LOG" 2>/dev/null || echo "⚠️  还没设置初始位姿，导航目标会规划失败"
-    ros "ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: true}'" | grep -q "success=True" \
+    ros "timeout 5 ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: true}'" | grep -q "success=True" \
       && echo "🔓 已解锁。现在可以在 RViz 里用 2D Goal Pose 发目标（手里拿着遥控器）" \
       || echo "❌ 解锁失败，执行 $0 log 查看原因"
     ;;
 
   disarm)
-    ros "ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: false}'" | grep -q "success=True" \
+    ros "timeout 5 ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: false}'" | grep -q "success=True" \
       && echo "🔒 已上锁，机器人不会动" || echo "上锁失败（速度桥可能没在运行）"
     ;;
 
   stop)
     running || { echo "导航没有运行"; exit 0; }
-    ros "ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: false}'" >/dev/null 2>&1 && echo "🔒 已上锁"
+    ros "timeout 5 ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: false}'" >/dev/null 2>&1 && echo "🔒 已上锁"
     docker exec "$C" pkill -INT -f "[r]os2 launch go2w_bringup"
     docker exec "$C" pkill -INT -f "[r]os2 bag record" 2>/dev/null
     echo "正在停止……"
