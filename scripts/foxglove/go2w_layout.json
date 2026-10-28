@@ -1,0 +1,155 @@
+{
+  "configById": {
+    "3D!go2w_map": {
+      "followTf": "map",
+      "followMode": "follow-none",
+      "cameraState": {
+        "perspective": false,
+        "distance": 20,
+        "phi": 0,
+        "thetaOffset": 90,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "scene": {
+        "enableStats": false,
+        "transforms": { "showLabel": false, "axisScale": 0.4 }
+      },
+      "transforms": {},
+      "topics": {
+        "/map": { "visible": true, "colorMode": "map", "alpha": 1 },
+        "/global_costmap/costmap": { "visible": true, "colorMode": "costmap", "alpha": 0.35 },
+        "/local_costmap/costmap": { "visible": true, "colorMode": "costmap", "alpha": 0.6 },
+        "/scan": { "visible": true, "pointSize": 4, "colorMode": "flat", "flatColor": "#ff3b30ff" },
+        "/plan": { "visible": true, "type": "line", "lineWidth": 0.05, "gradient": ["#00c853ff", "#00c853ff"] },
+        "/local_plan": { "visible": true, "type": "line", "lineWidth": 0.04, "gradient": ["#2979ffff", "#2979ffff"] },
+        "/local_costmap/published_footprint": { "visible": true, "color": "#00b0ffff" },
+        "/amcl_pose": { "visible": true, "type": "arrow", "color": "#ff9100ff" },
+        "/particle_cloud": { "visible": false },
+        "/goal_pose": { "visible": true, "type": "arrow", "color": "#ffd600ff" },
+        "/odom": { "visible": false }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "layerId": "foxglove.Grid",
+          "frameId": "map",
+          "size": 20,
+          "divisions": 20,
+          "lineWidth": 1,
+          "color": "#248eff40",
+          "position": [0, 0, 0],
+          "rotation": [0, 0, 0],
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "pose",
+        "poseTopic": "/goal_pose",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "Indicator!go2w_armed": {
+      "path": "/go2w_cmd_bridge/armed.data",
+      "style": "background",
+      "fallbackColor": "#757575",
+      "fallbackLabel": "🔒 已上锁",
+      "rules": [
+        { "operator": "=", "rawValue": "true", "color": "#e53935", "label": "🔓 已解锁（会动）" }
+      ]
+    },
+    "Indicator!go2w_odom": {
+      "path": "/odom_healthy.data",
+      "style": "background",
+      "fallbackColor": "#e53935",
+      "fallbackLabel": "里程计 ❌ 不健康 / 无数据",
+      "rules": [
+        { "operator": "=", "rawValue": "true", "color": "#43a047", "label": "里程计正常" }
+      ]
+    },
+    "CallService!go2w_arm": {
+      "serviceName": "/go2w_cmd_bridge/arm",
+      "requestPayload": "{\"data\": true}",
+      "buttonText": "🔓 解锁",
+      "buttonTooltip": "先设好初始位姿；里程计不健康时速度桥会拒绝",
+      "buttonColor": "#e53935",
+      "editingMode": false
+    },
+    "CallService!go2w_disarm": {
+      "serviceName": "/go2w_cmd_bridge/arm",
+      "requestPayload": "{\"data\": false}",
+      "buttonText": "🔒 上锁",
+      "buttonColor": "#43a047",
+      "editingMode": false
+    },
+    "CallService!go2w_clear_local": {
+      "serviceName": "/local_costmap/clear_entirely_local_costmap",
+      "requestPayload": "{}",
+      "buttonText": "清空局部 costmap",
+      "editingMode": false
+    },
+    "Plot!go2w_cmd": {
+      "paths": [
+        { "value": "/cmd_vel.linear.x", "enabled": true, "timestampMethod": "receiveTime", "label": "vx 实发" },
+        { "value": "/cmd_vel.angular.z", "enabled": true, "timestampMethod": "receiveTime", "label": "wz 实发" },
+        { "value": "/cmd_vel_nav.linear.x", "enabled": true, "timestampMethod": "receiveTime", "label": "vx 控制器" }
+      ],
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "xAxisVal": "timestamp",
+      "followingViewWidth": 20
+    },
+    "RosOut!go2w_log": {
+      "searchTerms": [],
+      "minLogLevel": 2
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 70,
+    "first": "3D!go2w_map",
+    "second": {
+      "direction": "column",
+      "splitPercentage": 40,
+      "first": {
+        "direction": "column",
+        "splitPercentage": 40,
+        "first": {
+          "direction": "row",
+          "splitPercentage": 50,
+          "first": "Indicator!go2w_armed",
+          "second": "Indicator!go2w_odom"
+        },
+        "second": {
+          "direction": "row",
+          "splitPercentage": 33,
+          "first": "CallService!go2w_arm",
+          "second": {
+            "direction": "row",
+            "splitPercentage": 50,
+            "first": "CallService!go2w_disarm",
+            "second": "CallService!go2w_clear_local"
+          }
+        }
+      },
+      "second": {
+        "direction": "column",
+        "splitPercentage": 50,
+        "first": "Plot!go2w_cmd",
+        "second": "RosOut!go2w_log"
+      }
+    }
+  }
+}

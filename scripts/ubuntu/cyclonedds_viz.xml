@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ubuntu 上 RViz 用的 CycloneDDS 配置：域 44，经 Wi-Fi 单播连 Orin 或扩展坞上的 domain_bridge -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="44">
+    <General>
+      <Interfaces>
+        <!-- 本机（Ubuntu）的局域网地址，变了要改 -->
+        <NetworkInterface address="192.168.1.167"/>
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>30</MaxAutoParticipantIndex>
+      <Peers>
+        <!-- Orin 和扩展坞的 Wi-Fi 地址，哪台在跑导航就连哪台 -->
+        <Peer Address="192.168.1.111"/>
+        <Peer Address="192.168.1.142"/>
+      </Peers>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

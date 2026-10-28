@@ -1,0 +1,41 @@
+# domain_bridge：导航核心（域 43）↔ 可视化（域 44，Ubuntu 上的 RViz）
+# 只转发白名单里的话题，Wi-Fi 上不跑原始点云；QoS 自动与发布者一致
+name: go2w_viz_bridge
+from_domain: 43
+to_domain: 44
+topics:
+  # 机器人 → RViz
+  map:
+    type: nav_msgs/msg/OccupancyGrid
+  scan:
+    type: sensor_msgs/msg/LaserScan
+  tf:
+    type: tf2_msgs/msg/TFMessage
+  tf_static:
+    type: tf2_msgs/msg/TFMessage
+  odom:
+    type: nav_msgs/msg/Odometry
+  odom_healthy:
+    type: std_msgs/msg/Bool
+  robot_description:
+    type: std_msgs/msg/String
+  amcl_pose:
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+  # Nav2
+  plan:
+    type: nav_msgs/msg/Path
+  local_costmap/costmap:
+    type: nav_msgs/msg/OccupancyGrid
+  global_costmap/costmap:
+    type: nav_msgs/msg/OccupancyGrid
+  local_costmap/published_footprint:
+    type: geometry_msgs/msg/PolygonStamped
+  go2w_cmd_bridge/armed:
+    type: std_msgs/msg/Bool
+  # RViz → 机器人（2D Pose Estimate、2D Goal Pose）
+  initialpose:
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    reversed: true
+  goal_pose:
+    type: geometry_msgs/msg/PoseStamped
+    reversed: true

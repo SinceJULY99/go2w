@@ -1,0 +1,5 @@
+# 镜像构建只需要 Livox-SDK2 源码，其余（工作空间、地图、日志）都在运行时挂载
+*
+!third_party/Livox-SDK2
+third_party/Livox-SDK2/build
+third_party/Livox-SDK2/.git

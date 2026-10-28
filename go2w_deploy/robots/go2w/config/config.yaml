@@ -1,0 +1,65 @@
+FSM:
+  _: # enabled fsms
+    Passive:
+      id: 1
+    FixStand:
+      id: 2
+    Velocity:
+      id: 3
+      type: RLBase
+  Passive:
+    transitions: 
+      FixStand: LT + A.on_pressed
+    mode: [
+      1, 1, 1, 1,
+      1, 1, 1, 1, 
+      1, 1, 1, 1, 
+      1, 1, 1, 1
+    ]
+    kd: [ 
+      3, 3, 3, 3, 
+      3, 3, 3, 3, 
+      3, 3, 3, 3, 
+      3, 3, 3, 3
+    ]
+  FixStand:
+    transitions: 
+      Passive: LT + B.on_pressed
+      Velocity: start.on_pressed
+    kp: [ 60, 80, 80, 60, 
+          80, 80, 60, 80, 
+          80, 60, 80, 80,
+          0, 0, 0, 0]
+    kd: [ 5, 4, 4, 5, 
+          4, 4, 5, 4, 
+          4, 5, 4, 4,
+          3, 3, 3, 3
+    ]
+    ts: [0, 1, 2]
+    # 硬件序。前 12 项是腿,末 4 项是轮子——必须补齐到 16 项(与 kp/kd 等长)。
+    # 原因:enter() 用 kp.size()=16 填充第一行,而 linear_interpolate 按
+    # ys[0].size() 去索引 ys[1]/ys[2],后两行只有 12 项时会读越界。
+    # Ubuntu 的 libstdc++ 不开断言,静默读垃圾值(轮子 kp=0 所以不产生力矩,看似正常);
+    # Arch/gcc16 默认开 _GLIBCXX_ASSERTIONS,直接 abort。补 0 后行为与 Ubuntu 等价
+    # 且确定——轮子 kp=0,位置目标恒被忽略,仍只靠 kd 的末 4 项当阻尼。
+    # 第一行留空,enter() 时用当前实测角填充。
+    # 末行前 12 项必须等于 deploy.yaml 的 default_joint_pos —— FixStand 结束就切进
+    # Velocity,策略默认自己站在基准姿态上。原值 0.8/-1.5 是 robot_lab 那个策略的基准,
+    # DreamWaQ 是 0.67/-1.3。切策略时这里和下面的 policy_dir 要一起改。
+    #   DreamWaQ 末行: [0., 0.67, -1.3, 0., 0.67, -1.3, 0., 0.67, -1.3, 0., 0.67, -1.3, 0, 0, 0, 0]
+    qs: [
+      [],
+      [0.0, 1.36, -2.65, 0.0, 1.36, -2.65, 0.0, 1.36, -2.65, 0.0, 1.36, -2.65, 0, 0, 0, 0],
+      [0., 0.8, -1.5, 0., 0.8, -1.5, 0., 0.8, -1.5, 0., 0.8, -1.5, 0, 0, 0, 0],
+    ]
+  Velocity:
+    transitions:
+      Passive: LT + B.on_pressed
+    # 目录里要有 params/deploy.yaml + exported/policy.onnx。
+    # 两套策略,切换时同时改上面 FixStand qs 末行:
+    # - DreamWaQ 爬高台策略:6 帧 342 维、0.67/-1.3、FL/FR/RL/RR 轮在 3/7/11/15
+    # - robot_lab 纯平地 flat 策略(当前;4090 上 unitree_go2w_flat/2026-07-14_16-54-55,
+    #   deploy.yaml 复用 rough 那份——两者 obs/action/actuator 配置逐项相同):
+    #   单帧 57 维、0.8/-1.5、关节序 identity、轮子在 12-15
+    #   policy_dir: /home/barry/Dreamwaq/deploy/policies/dreamwaq_go2w
+    policy_dir: /home/barry/Dreamwaq/deploy/policies/robotlab_go2w_flat

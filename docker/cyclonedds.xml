@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Orin / 扩展坞上所有 ROS 进程共用的 CycloneDDS 配置（CycloneDDS 0.10.5，按域分别配置网卡）
+  网卡名来自 ros_env.sh 按机器设置的 GO2W_WIRED_IF / GO2W_WIFI_IF
+  域 43：导航核心，只走本机回环，不依赖、也不占用 Wi-Fi
+  域 44：可视化，只有 domain_bridge 用它，经 Wi-Fi 单播给 Ubuntu 上的 RViz
+  域 0 ：Go2W 内网（主控 192.168.123.161 用的默认域），只有速度桥 go2w_cmd_bridge 用它，走有线口
+-->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="43">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo"/>
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>120</MaxAutoParticipantIndex>
+      <Peers>
+        <Peer Address="127.0.0.1"/>
+      </Peers>
+    </Discovery>
+  </Domain>
+
+  <Domain Id="0">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="${GO2W_WIRED_IF}"/>
+      </Interfaces>
+    </General>
+  </Domain>
+
+  <Domain Id="44">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="${GO2W_WIFI_IF}"/>
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>30</MaxAutoParticipantIndex>
+      <Peers>
+        <!-- 外部 Ubuntu（RViz）。IP 变了要改这里，建议在路由器上固定 -->
+        <Peer Address="192.168.1.167"/>
+      </Peers>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

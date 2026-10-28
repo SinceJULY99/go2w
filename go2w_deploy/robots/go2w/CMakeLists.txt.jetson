@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.12)
+project(go2w_controller)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Go2-W 机载 Jetson (Ubuntu 20.04 aarch64) 适配。用法:拷成 CMakeLists.txt 再编。
+# 机上 /usr/local 装的是旧版 SDK(libunitree_go2_sdk,无 dds_wrapper),编不过本控制器,
+# 所以和 Arch 版一样直接指向随附的 unitree_sdk2 源码树,用它自带的 aarch64 预编译库。
+set(UNITREE_SDK_DIR "$ENV{HOME}/go2w_deploy/unitree_sdk2" CACHE PATH "unitree_sdk2 源码目录")
+set(ORT_DIR "${PROJECT_SOURCE_DIR}/../../thirdparty/onnxruntime-linux-aarch64-1.22.0")
+
+find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(yaml-cpp REQUIRED)
+find_package(spdlog REQUIRED)
+
+include_directories(
+  /usr/include/eigen3
+  ${UNITREE_SDK_DIR}/include
+  ${UNITREE_SDK_DIR}/thirdparty/include
+  ${UNITREE_SDK_DIR}/thirdparty/include/ddscxx
+  include
+  ${ORT_DIR}/include
+  ${PROJECT_SOURCE_DIR}/../../include/
+)
+
+link_directories(${UNITREE_SDK_DIR}/thirdparty/lib/aarch64)
+
+# Ubuntu 20.04 的 spdlog 1.5 用自带 fmt(系统没装 libfmt),所以不定义
+# SPDLOG_FMT_EXTERNAL、也不链 fmt;用 spdlog::spdlog 目标带上它自己的编译宏。
+link_libraries(
+  ${UNITREE_SDK_DIR}/lib/aarch64/libunitree_sdk2.a
+  ddsc ddscxx rt pthread # dds
+  libboost_program_options.a libyaml-cpp.a spdlog::spdlog
+  ${ORT_DIR}/lib/libonnxruntime.so
+)
+
+file(GLOB_RECURSE ADD_SRC_LIST
+  src/*.cpp
+)
+
+add_library(${PROJECT_NAME}_lib ${ADD_SRC_LIST})
+link_libraries(${PROJECT_NAME}_lib)
+
+add_executable(go2w_ctrl main.cpp)
+
+# /usr/local/lib 里有旧 SDK 带的另一版 libddsc,写死 rpath 确保跑时加载随附的那份
+set_target_properties(go2w_ctrl PROPERTIES
+  BUILD_RPATH "${ORT_DIR}/lib;${UNITREE_SDK_DIR}/thirdparty/lib/aarch64"
+)

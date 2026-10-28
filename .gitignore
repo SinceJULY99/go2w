@@ -1,0 +1,8 @@
+.DS_Store
+third_party/
+ws/build/
+ws/install/
+ws/log/
+data/
+__pycache__/
+*.pyc

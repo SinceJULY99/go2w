@@ -1,0 +1,20 @@
+# 建图 / 定位用的 2D scan：在水平的 base_footprint 下按离地高度切片
+#
+# 高度选择（雷达离地 0.527 m、前倾 15.6°、垂直视场 -7°~+52°）：
+#   前方最低光束 -22.6°，1.27 m 处打到地面；后方最低光束 +8.6°（被前倾抬高）
+#   0.3–1.6 m：避开地面，后方 6 m 内也能扫到墙
+# 避障另用低位切片（S7），不用这一份
+pcl2scan_slam:
+  ros__parameters:
+    target_frame: base_footprint
+    transform_tolerance: 0.05
+    min_height: 0.30
+    max_height: 1.60
+    angle_min: -3.14159
+    angle_max: 3.14159
+    angle_increment: 0.0087     # 0.5°，720 束
+    scan_time: 0.1
+    range_min: 0.45             # 从旋转中心算，去掉机身附近
+    range_max: 30.0
+    use_inf: true
+    inf_epsilon: 1.0

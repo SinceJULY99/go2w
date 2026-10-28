@@ -1,0 +1,5 @@
+# 第三方源码版本（源码只放在 Orin 的 ~/go2w/third_party/，不进 git）
+# 来源：2026-10-21 从旧容器 go2w_foxy 复制，FAST_LIO_ROS2 已还原为干净的上游版本
+Livox-SDK2         https://github.com/Livox-SDK/Livox-SDK2.git          08f523c
+livox_ros_driver2  https://github.com/Livox-SDK/livox_ros_driver2.git   4a1def9
+FAST_LIO_ROS2      https://github.com/Ericsii/FAST_LIO_ROS2.git         2fffc57   (含子模块 include/ikd-Tree e2e3f4e)

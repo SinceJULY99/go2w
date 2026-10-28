@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<!--
+  Go2W 坐标系（REP-105）：
+    base_footprint  地面上，机器人旋转中心的正下方，z=0 即地面
+    base_link       与 base_footprint 重合（平面导航只需要这一层）
+    livox_frame     MID360 点云与内置 IMU 的坐标系（两者已实测一致）
+
+  雷达安装参数（2026-10-21 静止实测，scripts/calib/mid360_static_check.py，to-base 模式）：
+    以地面平面为基准：pitch 15.59°（前端朝下），roll -1.80°，雷达原点离地 0.527 m
+    （按 IMU 重力算是 16.3° / -3.0°；地面和天花板都与 IMU 重力差约 1.4°，判断为 IMU 零偏，
+     导航以地面为准）
+  行驶标定（2026-10-21，scripts/calib/odom_motion_check.py）：
+    lidar_yaw -3.4°：两次 3 m 直行，运动方向都偏离雷达 x 轴 +3.3°/+3.4°
+    lidar_x 0.187 / lidar_y -0.017：原地转 357°，轨迹圆半径 0.19 m，
+      旋转中心在雷达正下方点后方 0.188 m（已按 -3.4° 偏航换算到车头方向）
+-->
+<robot name="go2w" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="lidar_x" default="0.187"/>
+  <xacro:arg name="lidar_y" default="-0.017"/>
+  <xacro:arg name="lidar_z" default="0.527"/>
+  <xacro:arg name="lidar_roll" default="-0.03147"/>  <!-- -1.80° -->
+  <xacro:arg name="lidar_pitch" default="0.27210"/>  <!-- 15.59° -->
+
+  <xacro:arg name="lidar_yaw" default="-0.0593"/>  <!-- -3.4° -->
+
+  <!-- base_footprint → base_link 是动态的（机身实时俯仰/横滚），由 planar_odom 发布，不在 URDF 里 -->
+  <link name="base_link"/>
+  <link name="livox_frame"/>
+  <!-- MID360 内置 IMU；FAST-LIO 的 "body" 坐标系就是它（名字在 FAST-LIO 代码里写死） -->
+  <link name="body"/>
+
+  <joint name="base_link_to_livox" type="fixed">
+    <parent link="base_link"/>
+    <child link="livox_frame"/>
+    <origin xyz="$(arg lidar_x) $(arg lidar_y) $(arg lidar_z)"
+            rpy="$(arg lidar_roll) $(arg lidar_pitch) $(arg lidar_yaw)"/>
+  </joint>
+
+  <!-- IMU 在雷达系下的位置 = -(FAST-LIO extrinsic_T)，两者姿态相同 -->
+  <joint name="livox_to_imu" type="fixed">
+    <parent link="livox_frame"/>
+    <child link="body"/>
+    <origin xyz="0.011 0.02329 -0.04412" rpy="0 0 0"/>
+  </joint>
+</robot>

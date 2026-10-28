@@ -1,0 +1,42 @@
+# 在 Orin 上：cd ~/go2w/docker && docker compose up -d --build
+name: go2w
+
+x-common: &common
+  image: go2w-humble:dev
+  network_mode: host      # 雷达走原始 UDP，DDS 也直接用宿主机网卡
+  ipc: host
+  init: true
+  restart: unless-stopped # 开机自启；docker 本身已配置为等时间同步后启动
+  environment:
+    - TZ=Asia/Shanghai
+  volumes:
+    - ..:/go2w
+    - /etc/localtime:/etc/localtime:ro
+  working_dir: /go2w/ws
+
+services:
+  # 导航核心：交互开发、运行各阶段 launch
+  ros:
+    <<: *common
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: go2w_humble
+
+  # 可视化桥：域 43 → 域 44（Wi-Fi），独立运行，挂了不影响导航核心
+  viz_bridge:
+    <<: *common
+    container_name: go2w_viz_bridge
+    depends_on: [ros]
+    command: >
+      bash -c "source /go2w/docker/ros_env.sh &&
+               exec ros2 run domain_bridge domain_bridge /go2w/ws/src/go2w_bringup/config/viz_bridge.yaml"
+
+  # Foxglove 可视化：域 43 → WebSocket :8765（Wi-Fi），独立运行，挂了不影响导航核心
+  foxglove:
+    <<: *common
+    container_name: go2w_foxglove
+    depends_on: [ros]
+    command: >
+      bash -c "source /go2w/docker/ros_env.sh &&
+               exec ros2 run foxglove_bridge foxglove_bridge --ros-args --params-file /go2w/ws/src/go2w_bringup/config/foxglove_bridge.yaml"

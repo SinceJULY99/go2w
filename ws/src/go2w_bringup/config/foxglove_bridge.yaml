@@ -1,0 +1,45 @@
+# foxglove_bridge：导航核心（域 43，仅本机回环）→ WebSocket ws://<机器人IP>:8765 → Foxglove
+# DDS 不上 Wi-Fi；Wi-Fi 上只有一个 WebSocket 连接，客户端换 IP 也不用改配置
+# 只放行白名单里的话题，原始点云（/livox/lidar、/cloud_registered）不转发
+foxglove_bridge:
+  ros__parameters:
+    port: 8765
+    address: 0.0.0.0
+    num_threads: 2
+    send_buffer_limit: 10000000   # 10 MB，Wi-Fi 卡顿时丢旧消息，不堆内存
+    use_compression: false        # 压缩省带宽但吃 Orin CPU，地图/costmap 量不大，先关
+    max_qos_depth: 10
+    topic_whitelist:
+      - '^/map$'
+      - '^/scan$'
+      - '^/tf$'
+      - '^/tf_static$'
+      - '^/odom$'
+      - '^/odom_healthy$'
+      - '^/robot_description$'
+      - '^/amcl_pose$'
+      - '^/particle_cloud$'
+      - '^/plan$'
+      - '^/local_plan$'
+      - '^/global_costmap/costmap$'
+      - '^/local_costmap/costmap$'
+      - '^/local_costmap/published_footprint$'
+      - '^/cmd_vel$'
+      - '^/cmd_vel_nav$'
+      - '^/go2w_cmd_bridge/armed$'
+      - '^/goal_pose$'
+      - '^/initialpose$'
+      - '^/rosout$'
+    # Foxglove 能发布的话题：只允许设初始位姿和发导航目标
+    client_topic_whitelist:
+      - '^/goal_pose$'
+      - '^/initialpose$'
+    # 能调用的服务：解锁/上锁（速度桥自己会在里程计不健康时拒绝解锁）、清 costmap
+    service_whitelist:
+      - '^/go2w_cmd_bridge/arm$'
+      - '^/(local|global)_costmap/clear_entirely_(local|global)_costmap$'
+    # 能看/改的参数：限速相关
+    param_whitelist:
+      - '^/go2w_cmd_bridge\..*'
+      - '^/controller_server\.FollowPath\.(vx_max|vx_min|vy_max|wz_max)$'
+      - '^/velocity_smoother\.max_velocity$'
