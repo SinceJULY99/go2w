@@ -32,10 +32,18 @@ topics:
     type: geometry_msgs/msg/PolygonStamped
   go2w_cmd_bridge/armed:
     type: std_msgs/msg/Bool
-  # RViz → 机器人（2D Pose Estimate、2D Goal Pose）
+  go2w_patrol/markers:
+    type: visualization_msgs/msg/MarkerArray
+  # RViz → 机器人（2D Pose Estimate、2D Goal Pose、Patrol Pose / Publish Point 给巡逻点）
   initialpose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     reversed: true
   goal_pose:
     type: geometry_msgs/msg/PoseStamped
+    reversed: true
+  patrol_pose:
+    type: geometry_msgs/msg/PoseStamped
+    reversed: true
+  clicked_point:
+    type: geometry_msgs/msg/PointStamped
     reversed: true

@@ -39,6 +39,10 @@ RUN cmake -S /tmp/Livox-SDK2 -B /tmp/Livox-SDK2/build -DCMAKE_BUILD_TYPE=Release
 RUN apt-get update && apt-get install -y --no-install-recommends ros-humble-domain-bridge \
  && rm -rf /var/lib/apt/lists/*
 
+# 网页控制台后端（web/server/go2w_web.py）：HTTP + WebSocket 同一端口
+RUN apt-get update && apt-get install -y --no-install-recommends python3-aiohttp \
+ && rm -rf /var/lib/apt/lists/*
+
 RUN echo 'source /go2w/docker/ros_env.sh' >> /root/.bashrc
 
 WORKDIR /go2w/ws

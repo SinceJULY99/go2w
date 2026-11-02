@@ -32,11 +32,17 @@ services:
       bash -c "source /go2w/docker/ros_env.sh &&
                exec ros2 run domain_bridge domain_bridge /go2w/ws/src/go2w_bringup/config/viz_bridge.yaml"
 
-  # Foxglove 可视化：域 43 → WebSocket :8765（Wi-Fi），独立运行，挂了不影响导航核心
-  foxglove:
+  # 网页控制台：域 43 → http://<导航主机>:8080（Wi-Fi），独立运行，挂了不影响导航核心
+  web:
     <<: *common
-    container_name: go2w_foxglove
+    container_name: go2w_web
     depends_on: [ros]
+    # 运行档位（启停建图 / 定位 / 导航、巡逻、录包）要在 go2w_humble 里 docker exec，所以挂 docker.sock。
+    # 注意：这等于给了网页后端控制本机 docker 的权限；后端只执行固定的几种命令（见 web/server/procs.py）
+    volumes:
+      - ..:/go2w
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     command: >
       bash -c "source /go2w/docker/ros_env.sh &&
-               exec ros2 run foxglove_bridge foxglove_bridge --ros-args --params-file /go2w/ws/src/go2w_bringup/config/foxglove_bridge.yaml"
+               exec python3 /go2w/web/server/go2w_web.py --port 8080"

@@ -6,3 +6,4 @@ ws/log/
 data/
 __pycache__/
 *.pyc
+.peek.jpg

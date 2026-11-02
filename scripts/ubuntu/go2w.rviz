@@ -111,6 +111,14 @@ Visualization Manager:
         Durability Policy: Volatile
         Reliability Policy: Reliable
       Keep: 50
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Patrol
+      Enabled: true
+      Topic:
+        Value: /go2w_patrol/markers
+        Depth: 5
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
   Global Options:
     Fixed Frame: map
     Background Color: 48; 48; 48
@@ -125,6 +133,14 @@ Visualization Manager:
     - Class: rviz_default_plugins/SetGoal
       Topic:
         Value: /goal_pose
+    - Class: rviz_default_plugins/SetGoal
+      Name: Patrol Pose
+      Topic:
+        Value: /patrol_pose
+    - Class: rviz_default_plugins/PublishPoint
+      Single click: true
+      Topic:
+        Value: /clicked_point
   Views:
     Current:
       Class: rviz_default_plugins/TopDownOrtho

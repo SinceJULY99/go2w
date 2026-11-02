@@ -7,7 +7,8 @@
 
 安全设计（由内到外）：
   1. 默认上锁：启动后不发任何运动指令，必须调用 ~/arm(true) 解锁
-  2. 限速：vx、vy、wz 分别限幅
+  2. 限速：vx、vy、wz 分别限幅；行进中的小转向（|wz| < wz_deadband_moving）置零
+     —— Go2W 行进中只要执行转向就会切换成迈腿步态（左右踏步），直行不会
   3. 指令超时：cmd_timeout 内没有新的 /cmd_vel → 发 StopMove
   4. 里程计不健康（/odom_healthy 为 false 或超过 0.5 s 没收到）→ StopMove 并上锁
   5. 节点退出（Ctrl+C、SIGTERM）→ 先发 StopMove 再退出
@@ -60,8 +61,11 @@ class RobotSide(Node):
             return
         self.sent.discard(m.header.identity.id)
         api, code = m.header.identity.api_id, m.header.status.code
-        log = self.get_logger().info if code == 0 else self.get_logger().error
-        log('主控回复 api_id=%d code=%d' % (api, code))
+        # 两个级别各占一行：rclpy 不允许同一行代码先后用不同级别打日志，否则抛 ValueError，这个线程就退出了
+        if code == 0:
+            self.get_logger().info('主控回复 api_id=%d code=%d' % (api, code))
+        else:
+            self.get_logger().error('主控回复 api_id=%d code=%d' % (api, code))
 
 
 class CoreSide(Node):
@@ -77,6 +81,7 @@ class CoreSide(Node):
         self.timeout = p('cmd_timeout', 0.3).value
         self.require_odom = p('require_odom_healthy', True).value
         self.deadband = p('deadband', 0.01).value
+        self.wz_db_moving = p('wz_deadband_moving', 0.08).value
         rate = p('rate', 20.0).value
 
         self.armed = False
@@ -92,13 +97,14 @@ class CoreSide(Node):
         self.armed_pub = self.create_publisher(Bool, '~/armed', 10)
         self.create_timer(1.0 / rate, self.tick)
         self.add_on_set_parameters_callback(self.on_params)
-        self.get_logger().info('已启动（上锁状态）。限速 vx %.2f m/s、vy %.2f m/s、wz %.0f°/s，指令超时 %.2f s'
-                               % (self.max_vx, self.max_vy, math.degrees(self.max_wz), self.timeout))
+        self.get_logger().info('已启动（上锁状态）。限速 vx %.2f m/s、vy %.2f m/s、wz %.0f°/s，指令超时 %.2f s，行进中转向死区 %.3f rad/s'
+                               % (self.max_vx, self.max_vy, math.degrees(self.max_wz), self.timeout, self.wz_db_moving))
 
     def on_params(self, params):
         """运行中调整限速和超时：ros2 param set /go2w_cmd_bridge max_vx 0.45"""
         from rcl_interfaces.msg import SetParametersResult
-        names = {'max_vx': 'max_vx', 'max_vy': 'max_vy', 'max_wz': 'max_wz', 'cmd_timeout': 'timeout'}
+        names = {'max_vx': 'max_vx', 'max_vy': 'max_vy', 'max_wz': 'max_wz', 'cmd_timeout': 'timeout',
+                 'wz_deadband_moving': 'wz_db_moving'}
         for p in params:
             if p.name in names:
                 if not isinstance(p.value, (int, float)) or p.value < 0:
@@ -106,8 +112,8 @@ class CoreSide(Node):
         for p in params:
             if p.name in names:
                 setattr(self, names[p.name], float(p.value))
-        self.get_logger().warn('限速已更新：vx %.2f m/s、vy %.2f m/s、wz %.0f°/s，指令超时 %.2f s'
-                               % (self.max_vx, self.max_vy, math.degrees(self.max_wz), self.timeout))
+        self.get_logger().warn('限速已更新：vx %.2f m/s、vy %.2f m/s、wz %.0f°/s，指令超时 %.2f s，行进中转向死区 %.3f rad/s'
+                               % (self.max_vx, self.max_vy, math.degrees(self.max_wz), self.timeout, self.wz_db_moving))
         return SetParametersResult(successful=True)
 
     def on_cmd(self, m):
@@ -158,6 +164,8 @@ class CoreSide(Node):
         vx = max(-self.max_vx, min(self.max_vx, c.linear.x))
         vy = max(-self.max_vy, min(self.max_vy, c.linear.y))
         wz = max(-self.max_wz, min(self.max_wz, c.angular.z))
+        if abs(vx) > 0.05 and abs(wz) < self.wz_db_moving:
+            wz = 0.0
         if abs(vx) < self.deadband and abs(vy) < self.deadband and abs(wz) < self.deadband:
             if self.moving:
                 self.stop('速度指令为零')

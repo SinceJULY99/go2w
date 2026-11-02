@@ -9,7 +9,10 @@ amcl:
     scan_topic: /scan
     tf_broadcast: true
     transform_tolerance: 0.5
-    set_initial_pose: false          # 由 RViz 的 2D Pose Estimate 给出
+    # 启动时先用地图原点作初始位姿，让 map 坐标系立即存在（Foxglove 在 map 不存在时不画地图）；
+    # 实际位姿仍需在 Foxglove / RViz 里用 Pose estimate 拖准。nav.sh 只认手动设置（initialPoseReceived），不受影响
+    set_initial_pose: true
+    initial_pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
 
     # 全向模型：能正确处理倒车转向时的横向位移/侧滑。
     # 10-21 用差速模型时，倒车+转向过程中粒子散开（±0.1 m → ±1.1 m/84°），改用全向模型（旧系统也是）

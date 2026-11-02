@@ -70,7 +70,7 @@ controller_server:
     use_sim_time: false
     controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
-    min_y_velocity_threshold: 0.001     # 全向：横向速度也要算
+    min_y_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
     progress_checker_plugin: "progress_checker"
@@ -87,24 +87,34 @@ controller_server:
       xy_goal_tolerance: 0.15
       yaw_goal_tolerance: 0.15
 
+    # 10-29：Go2W 行进中只要真正执行转向（wz ≳ 0.05 rad/s）就会切换成迈腿步态（左右踏步），
+    # wz ≲ 0.03 被主控忽略、直行不踏步（cmd_step_test 实测）。所以：Theta* 出直线段 + 拐点，
+    # RotationShim 在路径方向偏差大时先原地转正，MPPI 在直线上尽量不出转向
     FollowPath:
-      plugin: "nav2_mppi_controller::MPPIController"
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      primary_controller: "nav2_mppi_controller::MPPIController"
+      angular_dist_threshold: 0.5        # 朝向与路径偏差超过约 30° 先原地转
+      forward_sampling_distance: 0.5
+      rotate_to_heading_angular_vel: 1.2   # 10-30 由 0.8 改：掉头太慢，与 wz 上限 1.2 一致
+      rotate_to_goal_heading: true         # 10-30：到点后由 RotationShim 原地转到目标朝向（原来交给 MPPI，被 TwirlingCritic 压得很慢）
+      max_angular_accel: 2.0
+      simulate_ahead_time: 1.0
       time_steps: 56
       model_dt: 0.05
       batch_size: 600       # 10-28 由 1000 改：扩展坞（Orin Nano）上 20 Hz 约 7% 周期超时
-      vx_std: 0.2
+      vx_std: 0.3           # 10-30 由 0.2 改：最高速提到 1.0 后要能采样到高速
       vy_std: 0.05          # 横向采样噪声小 → 横移只用于细微修正（10-22：0.2 时横向占比中位数 59%）
-      wz_std: 0.4
-      vx_max: 0.45
+      wz_std: 0.2           # 10-29 由 0.4 改：少采样转向，直线上少出小幅修正
+      vx_max: 1.0           # 10-30 由 0.45 改
       vx_min: -0.2
       vy_max: 0.1
       wz_max: 1.2
       iteration_count: 1
-      prune_distance: 1.7
+      prune_distance: 3.0   # 10-30 由 1.7 改：1.0 m/s × 预测 2.8 s
       transform_tolerance: 0.2
       temperature: 0.3
       gamma: 0.015
-      motion_model: "Omni"
+      motion_model: "DiffDrive"   # 10-29 由 Omni 改：横移同样会迈腿，速度桥 max_vy 也为 0
       visualize: false
       reset_period: 1.0
       regenerate_noises: false
@@ -167,7 +177,7 @@ controller_server:
       TwirlingCritic:
         enabled: true
         twirling_cost_power: 1
-        twirling_cost_weight: 3.0   # 10-28 由 10 改：转向太拘谨
+        twirling_cost_weight: 8.0   # 10-28 由 10 改为 3（转向太拘谨）；10-29 改为 8：大转向交给 RotationShim
 
 local_costmap:
   local_costmap:
@@ -178,8 +188,8 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_footprint
       rolling_window: true
-      width: 4
-      height: 4
+      width: 6              # 10-30 由 4 改：1.0 m/s 时 MPPI 要看到前方约 2.8 m
+      height: 6
       resolution: 0.05
       # Go2W 轮式站立的外轮廓（以旋转中心为原点），按 0.76 × 0.48 m 偏保守估计，待实测
       footprint: "[[0.38, 0.24], [0.38, -0.24], [-0.38, -0.24], [-0.38, 0.24]]"
@@ -285,8 +295,17 @@ planner_server:
     expected_planner_frequency: 20.0
     planner_plugins: ["GridBased"]
     # 10-22 由 NavFn 换成 Smac 2D：NavFn 路径有台阶状折角（平均每条 1 个 >20° 折点，最大 157°）；
-    # Smac 2D 按代价梯度走通道中间，并自带路径平滑
+    # 10-29 由 Smac 2D 换成 Theta*：Smac 出的是连续弧线，一路都要转向 → Go2W 一路踏步；
+    # Theta* 出"直线段 + 少数拐点"。原配置备份在 data/nav2_smac_20261029.yaml
     GridBased:
+      plugin: "nav2_theta_star_planner/ThetaStarPlanner"
+      how_many_corners: 8
+      w_euc_cost: 1.0
+      w_traversal_cost: 2.0           # 越大越远离障碍，但拐点会变多
+      w_heuristic_cost: 1.0
+      use_final_approach_orientation: false
+      allow_unknown: true
+    GridBasedSmac:                    # 不再使用，保留参数备查
       plugin: "nav2_smac_planner/SmacPlanner2D"
       tolerance: 0.5                  # 目标点在禁区里时，停在 0.5 m 内最近的可达位置
       downsample_costmap: false
@@ -355,8 +374,8 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
-    max_velocity: [0.45, 0.1, 1.2]
-    min_velocity: [-0.2, -0.1, -1.2]
+    max_velocity: [1.0, 0.0, 1.2]    # 10-30 vx 由 0.45 改 1.0；10-29 vy 由 0.1 改 0（横移会让 Go2W 迈腿）
+    min_velocity: [-0.2, 0.0, -1.2]
     max_accel: [1.0, 0.5, 2.0]     # 10-28 由 [0.5, 0.5, 1.0] 改：起步、转向太迟钝
     max_decel: [-1.2, -0.8, -2.5]  # 10-28 由 [-0.8, -0.8, -1.5] 改：减速不慢于加速
     odom_topic: "odom"

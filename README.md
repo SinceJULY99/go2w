@@ -1,8 +1,11 @@
 # Go2W 导航
 
-Go2W + Livox MID360 的二维几何导航系统，全部运行在 Orin 的 ROS 2 Humble 容器 `go2w_humble` 里。
-旧系统（Foxy 容器 `go2w_foxy`，ROS_DOMAIN_ID=42）保留作回退；新系统用 ROS_DOMAIN_ID=43，两者互不干扰。
+Go2W + Livox MID360 的二维几何导航系统，运行在 ROS 2 Humble 容器 `go2w_humble` 里（ROS_DOMAIN_ID=43）。
 
+> **2026-10-28 起导航跑在 Go2W 扩展坞（`unitree@192.168.1.142`）上，Orin 只作备用**，同一套代码按网卡自动识别机器。
+> 先读 `docs/扩展坞部署说明.md`；下文和其他文档里以 Orin 为主的命令仍适用于 Orin，扩展坞上把 `scripts/sync.sh` 换成 `scripts/sync.sh dock`。
+
+旧系统（Foxy 容器 `go2w_foxy`，ROS_DOMAIN_ID=42）保留在 Orin 上作回退。
 项目背景、问题分析和阶段计划见 `docs/Go2W导航项目交接说明.md`。
 
 ## 目录

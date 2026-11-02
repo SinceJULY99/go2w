@@ -5,6 +5,7 @@
 #   ~/go2w/scripts/nav.sh status             查看状态
 #   ~/go2w/scripts/nav.sh arm                解锁（机器人可以动）
 #   ~/go2w/scripts/nav.sh disarm             上锁（机器人不会动）
+#   ~/go2w/scripts/nav.sh patrol [次数]       A↔B 往返巡逻（RViz 里 Publish Point 点 A、B；Ctrl+C 停止）
 #   ~/go2w/scripts/nav.sh stop               上锁并停止导航
 #   ~/go2w/scripts/nav.sh log                看最近的日志
 set -uo pipefail
@@ -74,9 +75,17 @@ case "${1:-}" in
       && echo "🔒 已上锁，机器人不会动" || echo "上锁失败（速度桥可能没在运行）"
     ;;
 
+  patrol)
+    if ! running; then echo "导航没有运行，先执行：$0 start"; exit 1; fi
+    armed || echo "⚠️  速度桥还没解锁，巡逻会等到解锁后才开始（另开终端执行 $0 arm）"
+    echo "在 RViz 里用 Publish Point 依次点 A、B；Ctrl+C 停止巡逻（手里拿着遥控器）"
+    docker exec -it "$C" bash -c "source /go2w/docker/ros_env.sh >/dev/null 2>&1; exec ros2 run go2w_bringup patrol.py --ros-args -p loops:=${2:-0}"
+    ;;
+
   stop)
     running || { echo "导航没有运行"; exit 0; }
     ros "timeout 5 ros2 service call /go2w_cmd_bridge/arm std_srvs/srv/SetBool '{data: false}'" >/dev/null 2>&1 && echo "🔒 已上锁"
+    docker exec "$C" pkill -INT -f "[p]atrol.py" 2>/dev/null
     docker exec "$C" pkill -INT -f "[r]os2 launch go2w_bringup"
     docker exec "$C" pkill -INT -f "[r]os2 bag record" 2>/dev/null
     echo "正在停止……"
@@ -90,6 +99,6 @@ case "${1:-}" in
     ;;
 
   *)
-    sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
     ;;
 esac
