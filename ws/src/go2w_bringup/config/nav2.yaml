@@ -1,10 +1,12 @@
 # Nav2 参数（基于 Humble 自带 nav2_bringup/params/nav2_params.yaml 修改）
 # 主要改动：
 #   - 坐标系：base_footprint；真实时间（use_sim_time false）
-#   - 控制器：MPPI 全向模型（Go2W 能横移，实测横向速度最高 0.52 m/s）
+#   - 规划器：Theta*（直线段 + 少数拐点）；控制器：RotationShim（偏差大先原地转）+ MPPI DiffDrive
+#     （Go2W 能横移，但行进中横移或转向都会切换成迈腿踏步，所以不横移、直线上少转向，见 10-29 注释）
 #   - 障碍物：3D 点云体素层，离地 0.10–0.8 m；另有一路含地面点的数据只做清除。雷达前倾 15.6°，前方 1 m 内低矮物体可能在视野外；
 #     体素层只清除 3D 光束真正穿过的格子，远处看到的低矮障碍不会被上方掠过的光束擦掉
-#   - 速度上限与速度桥一致：vx 0.45、vy 0.1 m/s、wz 1.2 rad/s（10-22 由 0.3/0.5 提速；10-28 wz 0.8→1.2；横向压低，避免沿路径大量横移）
+#   - 速度上限三处一致（MPPI、velocity_smoother、cmd_bridge.yaml）：vx 1.0、vy 0、wz 1.2 rad/s
+#     （10-22 vx 0.3→0.45；10-28 wz 0.8→1.2；10-29 vy 0.1→0；10-30 vx 0.45→1.0）
 # map_server、AMCL 在 localization.launch.py 里，参数见 amcl.yaml
 
 bt_navigator:
@@ -103,11 +105,11 @@ controller_server:
       model_dt: 0.05
       batch_size: 600       # 10-28 由 1000 改：扩展坞（Orin Nano）上 20 Hz 约 7% 周期超时
       vx_std: 0.3           # 10-30 由 0.2 改：最高速提到 1.0 后要能采样到高速
-      vy_std: 0.05          # 横向采样噪声小 → 横移只用于细微修正（10-22：0.2 时横向占比中位数 59%）
+      vy_std: 0.05          # DiffDrive 下不采样 vy，此项不起作用（Omni 时代留下；10-22：0.2 时横向占比中位数 59%）
       wz_std: 0.2           # 10-29 由 0.4 改：少采样转向，直线上少出小幅修正
       vx_max: 1.0           # 10-30 由 0.45 改
       vx_min: -0.2
-      vy_max: 0.1
+      vy_max: 0.1           # DiffDrive 下不起作用（Omni 时代留下）
       wz_max: 1.2
       iteration_count: 1
       prune_distance: 3.0   # 10-30 由 1.7 改：1.0 m/s × 预测 2.8 s
